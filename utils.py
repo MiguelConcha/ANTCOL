@@ -25,7 +25,7 @@ def create_k_partite():
 	n = 1
 	k = 3
 	while n % k != 0:
-		n = randint(2, 20)
+		n = randint(2, 30)
 		k = randint(5, 10)
 	print("Orden de la gráfica (|V|):", n)
 	print("Número de particiones (k):", k)
@@ -54,7 +54,7 @@ class ColorClass:
 		self.vertices = []
 
 	def __str__(self):
-		return "Color: " + str(self.color) + "\nVértices en clase: " + str(self.vertices)
+		return "\n\nColor: " + str(self.color) + "\nVértices en clase: " + str(self.vertices)
 
 	def __repr__(self):
 		return str(self)
@@ -185,27 +185,41 @@ def Gamma(G, F, i):
 
 def generate_single_color_list(G, list_color_classes):
 	n = len(G.nodes)
-	mapping = [0] * 8
+	mapping = [0] * n
 	for cc in list_color_classes:
 		for v in cc.vertices:
 			mapping[v] = cc.color
 	return mapping
 
+def get_colors_strings(list_int_colors):
+	res = []
+	for i in list_int_colors:
+		res.append(color_map(i + 1))
+	return res
 
-"""
-C1 = ColorClass(1)
-C2 = ColorClass(2)
-C3 = ColorClass(3)
-C1.vertices.append(2)
-C1.vertices.append(4)
-C1.vertices.append(5)
-C2.vertices.append(0)
-C2.vertices.append(6)
-C3.vertices.append(1)
-C3.vertices.append(3)
-C3.vertices.append(7)
-print(C1)
-print(C2)
-print(C3)
-listaa = [C1, C2, C3]
-print(generate_single_color_list(listaa))"""
+def test(G, mini):
+	"""
+	Propósitos de prueba para ver si al crear una asignación de vértices
+	en clase de colores podemos crear la representación adecuada de la gráfica
+	"""
+	total_used = 0
+	while total_used < mini:
+		k = randint(mini, 10)
+		list_color_classes = [None] * k
+		for number in range(k):
+			new_color_class = ColorClass(number)
+			list_color_classes[number] = new_color_class
+		for node in G.nodes:
+			which_color_class = randint(0, len(list_color_classes) - 1)
+			list_color_classes[which_color_class].vertices.append(node)
+			G.node[node]['color'] = which_color_class
+		total_used = non_empty(list_color_classes)
+	print(list_color_classes)
+	print(total_used)
+	return list_color_classes, total_used
+
+def non_empty(list_of_lists):
+	count = 0
+	for cc in list_of_lists:
+		count += 1 if len(cc.vertices) != 0 else 0
+	return count
