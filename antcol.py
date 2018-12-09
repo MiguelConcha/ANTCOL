@@ -27,6 +27,29 @@ def P_ik(G, list_color_classes, i, k, alpha, beta, t):
 			return numerator / denominator
 	return 0
 
+def n_ik(G, list_color_classes, i, k):
+	random_choice = randint(1,3)
+	C_k = get_color_class(list_color_classes, k)
+	W = W(G, C_k)
+	B =  B(G, C_k)
+	if random_choice == 1:
+		return degree_in_subgraph(G, B, i)
+	elif random_choice == 2:
+		return len(W) - degree_in_subgraph(G, W, i)
+	else:
+		return degree_in_subgraph(G, union_lists(B, W), i)
+
+def Gamma(G, F, i):
+	"""
+	Devuelve la lista de los vecinos del vértice i
+	en el conjunto de vértices F, en la gráfica G.
+	"""
+	neighbors = []
+	for v in F:
+		if v in G.adj[i]:
+			neighbors.append(v)
+	return neighbors
+
 def select_pik(G, list_color_classes, alpha, beta, t, F):
 	circular_l = cycle(F)
 	for i in circular_l:
@@ -114,19 +137,16 @@ def update_trail_matrix(G, t, delta, rho):
 
 if __name__ == '__main__':
 	tp.banner("Algoritmo ANTCOL (Algoritmo ACO de Dowsland y Thompson).")
-
+	num_vertices = int(input("Máximo número de vértices (recomiendo 30): "))
 	print("> Contruyendo gráfica aleatoria k-partita que sabemos es k-coloreable...")
-	G, k = create_k_partite()
-	
+	G, k = create_k_partite(num_vertices)
 	print("\n> Mostrando la gráfica generada (cerrar el plot para continuar)...")
 	plt.figure()
 	title = "Gráfica G original, " + str(k) + "-partita" 
 	plt.title(title, color='blue')
 	nx.draw(G, node_color='black', with_labels=True, font_weight='bold', font_color='white')
 	plt.show()
-
 	print("\n> Comenzando ejecución de la metaheurística sobre G...")
-
 	print("\nMeta-parámetros:")
 	ncycles = 100
 	nants = len(G.nodes) // 4
@@ -134,14 +154,10 @@ if __name__ == '__main__':
 	beta = 0.5
 	rho = 0.5
 	print("ncycles: %d\nnants: %d\nα: %.2f\nβ: %.2f\nρ: %.2f" % (ncycles, nants, alpha, beta, rho))
-
 	# Inicializando el atributo de color para los vértices.
 	clear_colors(G)
 	# Ejecutando el ACO.
 	list_color_classes = ANTCOL(G, ncycles, nants, alpha, beta, rho, k)
-
-	print("buenos", list_color_classes)
-	print("ya")
 	sol, total_colors = test(G, k)
 	mapping_colors = generate_single_color_list(G, sol)
 	colors = get_colors_strings(mapping_colors)
