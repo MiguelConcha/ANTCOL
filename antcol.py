@@ -142,28 +142,74 @@ def select_pik(G, list_color_classes, alpha, beta, t, F):
 			return element 
 
 def _denominator(G, list_color_classes, W, k, alpha, beta, t):
+	"""
+	Función que calcula el denominador para la fórmula del cálculo de probabilidad.
+
+	:param G: networkx.Graph
+	:param list_color_classes: La lista de clases de colores.
+	:param W: La lista de vértices que pueden añadirse a la clase de color k.
+	:param k: La etiqueta numérica de la clase de color.
+	:params alpha beta: Los metaparámetros de la metaheurística.
+	:param t: La matriz de rastros.
+	"""
 	result = 0
 	for j in W:
+		# Aplicamos la fórmula del artículo.
 		result += (tau_ik(j, k, list_color_classes, t)**alpha) * (n_ik(G, list_color_classes, j, k)**beta)
 	return result
 
 def initialise_trail_matrix(V):
+	"""
+	Función que inicializa la matriz de rastros.
+	
+	:param V: La lista de vértices a partir de la que se creará la matriz.
+	:return: La matriz de rastros inicializada.
+	:rtype: numpy array.
+	"""
 	n = len(V)
+	# Se inicializa con puros ceros. Es cuadrada.
 	M = np.zeros((n,n))
 	for i in range(n):
 		for j in range(n):
+			# Colocamos un uno en la entrada actual en caso de que no sean
+			# iguales los índices porque se refieren al link entre el mismo
+			# vértice.
 			if i != j:
 				M[i][j] = 1.
 	return M
 
 def initialise_trail_update_matrix(t):
+	"""
+	Función que inicializa la matriz de actualización para la otra matriz
+	de rastros.
+
+	:param t: La matriz de rastros.
+	:return: La matriz para la actualización de la otra matriz t.
+	:rtype: numpy array.
+	"""
+	# A partir de las dimensiones de la otra matriz de rastros, comenzamos a iterar.
 	delta = t
 	for row in delta:
 		for entry in row:
+			# Simplemente cada entrada se inicializa con un cero.
 			entry = 0
 	return delta
 
 def ANTCOL(G, ncycles, nants, alpha, beta, rho, k):
+	"""
+	Procedimiento principal para la metaheurística descrita en el artículo.
+
+	:param G: networkx.Graph
+	:param ncycles: El número de ciclos total de ejecución.
+	:param nants: El número de hormigas que se usarán.
+	:params alpha beta: Los metaparámetros para la obtención de la probabilidad
+	                    de elección de los vértices para su coloración.
+	:param rho: Metaparámetro para la evaporación.
+	:param k: El número de particiones existentes en la gráfica sobre la que se trabajará.
+	          Servirá potencialmente para hacer optimizaciones.
+	:return: La lista de clases de colores que se obtuvieron para la coloración de G.
+	:rtype: [ColorClass].
+	"""
 	tp.banner("Lista de Vértices V: ")
 	V = list(G)
 	print(V)
@@ -187,31 +233,67 @@ def ANTCOL(G, ncycles, nants, alpha, beta, rho, k):
 								
 				F = X													# Inicializar la lista de vértices aún factibles para colorear con k.												
 				i = select_with_probability(F, 1/len(F))	   			# Seleccionar i ∈ F con probabilidad 1/|F|.
-				COLOUR_VERTEX(i, k, list_color_classes, F, 	X)				
+				COLOUR_VERTEX(G, i, k, list_color_classes, F, 	X)				
 				while F:
 					
 					i = select_pik(G, list_color_classes, alpha, beta, t, F)
-					COLOUR_VERTEX(i, k, list_color_classes, F, X)		
-			
+					COLOUR_VERTEX(G, i, k, list_color_classes, F, X)		
+				
 			update_trail_update_matrix(G, delta, k)						# Actualizar matriz de actualización de rastros.
 		update_trail_matrix(G, t, delta, rho)							# Actualizar matriz de rastros.
 	
 	return list_color_classes 											# Regresar las clases de color.
 
-def COLOUR_VERTEX(i, k, list_color_classes, F, X):
+def COLOUR_VERTEX(G, i, k, list_color_classes, F, X):
+	"""
+	Procedimiento mencionado en el artículo para colorear un vértoce i del color k.
+
+	:param G: networkx.Graph
+	:param i: El vértice que será coloreado.
+	:param k: El color del que será coloreado el vértice.
+	:param list_color_classes: La lista de clases de color.
+	:param F: La lista de vértices aún factibles para colorear con el color k.
+	:param X: La lista de vértices que todavía no han sido pintados.
+	"""
+	G.node[i]['color'] = k
+	# Ya estamos pintando el vértice, así que lo quitamos de la lista de los aún no coloreados.
 	X.remove(i)
+	# Obtenemos la clase de color asociada a la etiqueta numérica k.
 	C_k = get_color_class(list_color_classes, k)
+	# Agregamos el vértice a la clase de color actual.
 	C_k.vertices.append(i)
+	# Actualizando la lista F.
 	F = difference_lists(F, union_lists(Gamma(G, F, i),[i]))
 
 def update_trail_update_matrix(G, delta, k):
+	"""
+	Función para actualizar la matriz que sirve para actualizar
+	la otra matriz de rastros.
+
+	:param G: networkx.Graph
+	:param delta: La matriz para la actualización al momento presente.
+	:param k: La nueva etiqueta numérica que fue creada en la iteración actual
+	          por la hormiga actual.
+	"""
+	# Viendo la cantidad en que deberemos incrementar algunas entradas.
 	increase = 1 / (k + 1)
+	# Recorriendo la matriz.
 	for i,row in enumerate(delta):
 		for j, entry in enumerate(row):
+			# Incrementando el valor de la entrada en los casos en que no coinciden los 
+			# índices y tienen asociado el mismo color (son de la misma clase de color).
 			if i != j and G.node[i]['color'] == G.node[j]['color']:
 				delta[i][j] += increase
 
 def update_trail_matrix(G, t, delta, rho):
+	"""
+	Función de actualización de la matriz de rastros.
+
+	:param G: networkx.Graph
+	:param t: Matriz de rastros.
+	:param delta: Matriz de actualización de la matriz de rastros.
+	:param rho: Metaparámetro para la evaporación de los rastros (feromonas).
+	"""
 	for i in range(len(G.nodes)):
 		for j in range(len(G.nodes)):
 			if i != j:
